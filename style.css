@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            background-color: #4CAF50;
+            color: #fff;
+            padding: 15px;
+            text-align: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        main {
+            padding: 80px 20px 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin: 10px;
+        }
+        #map {
+            height: 300px;
+            width: 100%;
+            border-radius: 8px;
+        }
+        #json-output {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            margin-top: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 15px;
+        }
+        .card h3 {
+            font-size: 18px;
+            margin: 0 0 10px;
+            color: #4CAF50;
+        }
+        .card p {
+            font-size: 16px;
+            margin: 0;
+            color: #666;
+        }
+        footer {
+            background-color: #4CAF50;
+            color: #fff;
+            text-align: center;
+            padding: 10px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
+        }
+        @media (max-width: 600px) {
+            #map {
+                height: 250px;
+            }
+            main {
+                padding: 70px 10px 10px;
+                margin: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Location Tracker</h1>
+    </header>
+    <main>
+        <section>
+            <h2>Your Current Location on Map</h2>
+            <div id="map"></div>
+            <h2>Your Current Location Details</h2>
+            <div id="json-output">Fetching location...</div>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2024 Location Tracker. All rights reserved.</p>
+    </footer>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError);
+            } else {
+                document.getElementById("json-output").textContent = "Geolocation is not supported by this browser.";
+            }
+        }
+
+        function showPosition(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+
+            const map = L.map('map').setView([lat, lon], 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            const marker = L.marker([lat, lon]).addTo(map);
+
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`)
+                .then(response => response.json())
+                .then(data => {
+                    const addressDetails = formatAddress(data.address);
+                    displayAddressDetails(addressDetails);
+                    marker.bindPopup(data.display_name).openPopup();
+                })
+                .catch(error => {
+                    document.getElementById("json-output").textContent = `Error fetching location details: ${error}`;
+                });
+        }
+
+        function formatAddress(address) {
+            const formattedAddress = {};
+            if (address.village) formattedAddress.village = address.village;
+            if (address.town) formattedAddress.town = address.town;
+            if (address.suburb) formattedAddress.suburb = address.suburb;
+            if (address.city) formattedAddress.city = address.city;
+            formattedAddress.county = address.county || "";
+            formattedAddress.state = address.state || "";
+            formattedAddress.country = address.country || "";
+            formattedAddress.country_code = address.country_code || "";
+            return { address: formattedAddress };
+        }
+
+        function displayAddressDetails(addressDetails) {
+            const output = document.getElementById("json-output");
+            const address = addressDetails.address;
+            output.innerHTML = '';
+
+            if (address.village) {
+                output.innerHTML += createCard('Village', address.village);
+            } else if (address.town) {
+                output.innerHTML += createCard('Town', address.town);
+            } else if (address.suburb) {
+                output.innerHTML += createCard('Suburb', address.suburb);
+            } else if (address.city) {
+                output.innerHTML += createCard('City', address.city);
+            }
+            
+            if (address.county) {
+                output.innerHTML += createCard('County', address.county);
+            }
+            if (address.state) {
+                output.innerHTML += createCard('State', address.state);
+            }
+            if (address.country) {
+                output.innerHTML += createCard('Country', address.country);
+            }
+            if (address.country_code) {
+                output.innerHTML += createCard('Country Code', address.country_code);
+            }
+        }
+
+        function createCard(title, content) {
+            return `
+                <div class="card">
+                    <h3>${title}</h3>
+                    <p>${content}</p>
+                </div>
+            `;
+        }
+
+        function showError(error) {
+            let errorMessage = "";
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = "User denied the request for Geolocation.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = "Location information is unavailable.";
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = "The request to get user location timed out.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    errorMessage = "An unknown error occurred.";
+                    break;
+            }
+            document.getElementById("json-output").textContent = errorMessage;
+        }
+
+        getLocation();
+    </script>
+</body>
+</html>
