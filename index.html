@@ -81,7 +81,7 @@
                 padding: 120px 10px 70px;
                 margin: 5px;
             }
-            section h2{
+            section h2 {
                 color: grey;
                 text-align: center;
                 font-family: cursive;
@@ -145,10 +145,10 @@
             if (address.town) formattedAddress.town = address.town;
             if (address.suburb) formattedAddress.suburb = address.suburb;
             if (address.city) formattedAddress.city = address.city;
-            formattedAddress.county = address.county || "";
-            formattedAddress.state = address.state || "";
-            formattedAddress.country = address.country || "";
-            formattedAddress.country_code = address.country_code || "";
+            if (address.county) formattedAddress.county = address.county;
+            if (address.state) formattedAddress.state = address.state;
+            if (address.country) formattedAddress.country = address.country;
+            if (address.country_code) formattedAddress.country_code = address.country_code;
             return { address: formattedAddress };
         }
 
@@ -159,14 +159,16 @@
 
             if (address.village) {
                 output.innerHTML += createCard('Village', address.village);
-            } else if (address.town) {
+            }
+            if (address.town) {
                 output.innerHTML += createCard('Town', address.town);
-            } else if (address.suburb) {
+            }
+            if (address.suburb) {
                 output.innerHTML += createCard('Suburb', address.suburb);
-            } else if (address.city) {
+            }
+            if (address.city) {
                 output.innerHTML += createCard('City', address.city);
             }
-            
             if (address.county) {
                 output.innerHTML += createCard('County', address.county);
             }
